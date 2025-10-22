@@ -210,3 +210,42 @@ func SearchPasswords(query string) ([]PasswordEntry, error) {
 
 	return entries, nil
 }
+
+func UpdatePassword(id int, service, username, encryptedPassword, notes string) error {
+	result, err := DB.Exec(
+		"UPDATE passwords SET service = ?, username = ?, encrypted_password = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+		service, username, encryptedPassword, notes, id,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("password entry not found")
+	}
+
+	return nil
+}
+
+func DeletePassword(id int) error {
+	result, err := DB.Exec("DELETE FROM passwords WHERE id = ?", id)
+	if err != nil {
+		return fmt.Errorf("failed to delete password: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("password entry not found")
+	}
+
+	return nil
+}
