@@ -18,7 +18,7 @@ A secure, command-line password manager built with Go. Store, manage, and quickl
 
 ### Prerequisites
 
-- [Go](https://go.dev/dl/) needs to be installed in your system
+[Go](https://go.dev/dl/) needs to be installed in your system
 
 ### Build from Source
 
@@ -46,46 +46,9 @@ Run the installed binary to add a password:
 passvault add
 ```
 
-## Quick Start
-
-### First Time Setup
-
-On first run, you'll be prompted to create a master password:
-
-```bash
-passvault add
-```
-
-The master password is used to encrypt all your stored passwords. Choose a strong, memorable password.
-
-### Adding a Password
-
-```bash
-# Interactive mode
-passvault add
-
-# With flags
-passvault add -s GitHub -u username@example.com -p mypassword -a gh
-
-# With password generation
-passvault add -s GitHub -u username@example.com
-# Choose option 2 to generate a secure password
-```
-
-### Retrieving a Password
-
-```bash
-# Quick access with alias
-passvault get gh
-
-# Search and select
-passvault get -q github
-
-# Interactive search
-passvault get
-```
-
 ## Commands
+
+On first run, you'll be prompted to create a master password. This is used to encrypt all your stored passwords. Choose a strong, memorable password.
 
 ### `add`
 
