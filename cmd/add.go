@@ -41,10 +41,19 @@ var addCmd = &cobra.Command{
 		}
 
 		if password == "" {
-			password, err = internal.PromptString("Password: ")
+			password, err = internal.PromptPasswordWithValidation("Password: ")
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error reading password: %v\n", err)
 				os.Exit(1)
+			}
+		} else {
+			strength := internal.CheckPasswordStrength(password)
+			if !strength.IsStrong {
+				fmt.Printf("⚠️  Password is weak (score: %d/4)\n", strength.Score)
+				if strength.Feedback != "" {
+					fmt.Printf("Feedback: %s\n", strength.Feedback)
+				}
+				fmt.Printf("Estimated crack time: %s\n", strength.CrackTime)
 			}
 		}
 

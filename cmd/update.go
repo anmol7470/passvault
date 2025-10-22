@@ -50,7 +50,7 @@ var updateCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		newPassword, err := promptWithDefault("Password", decryptedPassword)
+		newPassword, err := internal.PromptPasswordWithDefaultAndValidation("Password", decryptedPassword)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error reading password: %v\n", err)
 			os.Exit(1)

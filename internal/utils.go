@@ -9,6 +9,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/sethvargo/go-password/password"
+	"github.com/trustelem/zxcvbn"
 	"golang.org/x/term"
 )
 
@@ -208,4 +210,256 @@ func (m searchModel) View() string {
 	s.WriteString(mutedStyle.Render("↑/k up • ↓/j down • enter select • q quit"))
 
 	return s.String()
+}
+
+type PasswordStrength struct {
+	Score       int
+	IsStrong    bool
+	Feedback    string
+	CrackTime   string
+}
+
+func CheckPasswordStrength(pwd string) PasswordStrength {
+	result := zxcvbn.PasswordStrength(pwd, nil)
+
+	var feedback string
+	if result.Score < 2 {
+		feedback = "This password is too weak. Use a longer password with mixed characters."
+	} else if result.Score < 3 {
+		feedback = "This password could be stronger. Consider adding more characters and variety."
+	}
+
+	crackTime := estimateCrackTime(result.Guesses)
+
+	return PasswordStrength{
+		Score:     result.Score,
+		IsStrong:  result.Score >= 3,
+		Feedback:  feedback,
+		CrackTime: crackTime,
+	}
+}
+
+func estimateCrackTime(guesses float64) string {
+	secondsPerGuess := 0.00001
+	seconds := guesses * secondsPerGuess
+
+	if seconds < 1 {
+		return "instant"
+	}
+	if seconds < 60 {
+		return fmt.Sprintf("%.0f seconds", seconds)
+	}
+	if seconds < 3600 {
+		return fmt.Sprintf("%.0f minutes", seconds/60)
+	}
+	if seconds < 86400 {
+		return fmt.Sprintf("%.0f hours", seconds/3600)
+	}
+	if seconds < 2592000 {
+		return fmt.Sprintf("%.0f days", seconds/86400)
+	}
+	if seconds < 31536000 {
+		return fmt.Sprintf("%.0f months", seconds/2592000)
+	}
+	if seconds < 3153600000 {
+		return fmt.Sprintf("%.0f years", seconds/31536000)
+	}
+	return "centuries"
+}
+
+func GenerateSecurePassword() (string, error) {
+	pwd, err := password.Generate(16, 4, 4, false, false)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate password: %w", err)
+	}
+	return pwd, nil
+}
+
+func PromptPasswordWithValidation(prompt string) (string, error) {
+	fmt.Println(prompt)
+	fmt.Println("Options:")
+	fmt.Println("1. Enter password manually")
+	fmt.Println("2. Generate a secure password")
+
+	choice, err := PromptString("Choose (1/2): ")
+	if err != nil {
+		return "", err
+	}
+
+	switch choice {
+	case "1":
+		return promptManualPasswordWithValidation()
+	case "2":
+		generated, err := GenerateSecurePassword()
+		if err != nil {
+			return "", err
+		}
+		fmt.Printf("\nGenerated password: %s\n", generated)
+		fmt.Print("Use this password? (yes/no): ")
+		confirm, err := PromptString("")
+		if err != nil {
+			return "", err
+		}
+		if strings.ToLower(confirm) == "yes" {
+			return generated, nil
+		}
+		return PromptPasswordWithValidation("Password:")
+	default:
+		fmt.Println("Invalid choice. Please try again.")
+		return PromptPasswordWithValidation(prompt)
+	}
+}
+
+func promptManualPasswordWithValidation() (string, error) {
+	for {
+		fmt.Print("Enter password: ")
+		pwd, err := PromptString("")
+		if err != nil {
+			return "", err
+		}
+
+		if pwd == "" {
+			return "", fmt.Errorf("password cannot be empty")
+		}
+
+		strength := CheckPasswordStrength(pwd)
+
+		if strength.IsStrong {
+			fmt.Printf("✓ Password strength: Strong (score: %d/4)\n", strength.Score)
+			return pwd, nil
+		}
+
+		fmt.Printf("\n⚠️  Password is weak (score: %d/4)\n", strength.Score)
+		if strength.Feedback != "" {
+			fmt.Printf("Feedback: %s\n", strength.Feedback)
+		}
+		fmt.Printf("Estimated crack time: %s\n\n", strength.CrackTime)
+
+		fmt.Println("Options:")
+		fmt.Println("1. Enter a different password")
+		fmt.Println("2. Generate a secure password")
+		fmt.Println("3. Use this password anyway")
+
+		choice, err := PromptString("Choose (1/2/3): ")
+		if err != nil {
+			return "", err
+		}
+
+		switch choice {
+		case "1":
+			continue
+		case "2":
+			generated, err := GenerateSecurePassword()
+			if err != nil {
+				return "", err
+			}
+			fmt.Printf("\nGenerated password: %s\n", generated)
+			fmt.Print("Use this password? (yes/no): ")
+			confirm, err := PromptString("")
+			if err != nil {
+				return "", err
+			}
+			if strings.ToLower(confirm) == "yes" {
+				return generated, nil
+			}
+			continue
+		case "3":
+			fmt.Print("Are you sure you want to use this weak password? (yes/no): ")
+			confirm, err := PromptString("")
+			if err != nil {
+				return "", err
+			}
+			if strings.ToLower(confirm) == "yes" {
+				return pwd, nil
+			}
+			continue
+		default:
+			fmt.Println("Invalid choice. Please try again.")
+			continue
+		}
+	}
+}
+
+func PromptPasswordWithDefaultAndValidation(prompt, defaultValue string) (string, error) {
+	fmt.Printf("%s [Press Enter to keep current]: ", prompt)
+	pwd, err := PromptString("")
+	if err != nil {
+		return "", err
+	}
+
+	if pwd == "" {
+		return defaultValue, nil
+	}
+
+	strength := CheckPasswordStrength(pwd)
+
+	if strength.IsStrong {
+		fmt.Printf("✓ Password strength: Strong (score: %d/4)\n", strength.Score)
+		return pwd, nil
+	}
+
+	for {
+		fmt.Printf("\n⚠️  Password is weak (score: %d/4)\n", strength.Score)
+		if strength.Feedback != "" {
+			fmt.Printf("Feedback: %s\n", strength.Feedback)
+		}
+		fmt.Printf("Estimated crack time: %s\n\n", strength.CrackTime)
+
+		fmt.Println("Options:")
+		fmt.Println("1. Enter a different password")
+		fmt.Println("2. Generate a secure password")
+		fmt.Println("3. Use this password anyway")
+
+		choice, err := PromptString("Choose (1/2/3): ")
+		if err != nil {
+			return "", err
+		}
+
+		switch choice {
+		case "1":
+			fmt.Print("New password: ")
+			newPwd, err := PromptString("")
+			if err != nil {
+				return "", err
+			}
+			if newPwd == "" {
+				return "", fmt.Errorf("password cannot be empty")
+			}
+			pwd = newPwd
+			strength = CheckPasswordStrength(pwd)
+			if strength.IsStrong {
+				fmt.Printf("✓ Password strength: Strong (score: %d/4)\n", strength.Score)
+				return pwd, nil
+			}
+			continue
+		case "2":
+			generated, err := GenerateSecurePassword()
+			if err != nil {
+				return "", err
+			}
+			fmt.Printf("\nGenerated password: %s\n", generated)
+			fmt.Print("Use this password? (yes/no): ")
+			confirm, err := PromptString("")
+			if err != nil {
+				return "", err
+			}
+			if strings.ToLower(confirm) == "yes" {
+				return generated, nil
+			}
+			continue
+		case "3":
+			fmt.Print("Are you sure you want to use this weak password? (yes/no): ")
+			confirm, err := PromptString("")
+			if err != nil {
+				return "", err
+			}
+			if strings.ToLower(confirm) == "yes" {
+				return pwd, nil
+			}
+			continue
+		default:
+			fmt.Println("Invalid choice. Please try again.")
+			continue
+		}
+	}
 }
