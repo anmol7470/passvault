@@ -14,7 +14,7 @@ import (
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all stored passwords interactively",
-	Long:  `Display an interactive list of all stored passwords with search functionality`,
+	Long:  `Display an interactive list of all stored passwords with search functionality.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		masterPassword, err := internal.PromptMasterPassword()
 		if err != nil {

@@ -1,3 +1,5 @@
 .DS_Store
 passvault
 .claude
+passvault_export_*.json
+passvault_export_*.csv

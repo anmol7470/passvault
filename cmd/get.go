@@ -11,7 +11,7 @@ import (
 var getCmd = &cobra.Command{
 	Use:   "get",
 	Short: "Search and retrieve a specific password",
-	Long:  `Search for passwords by service name or username`,
+	Long:  `Search for passwords by service name or username.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		masterPassword, err := internal.PromptMasterPassword()
 		if err != nil {
