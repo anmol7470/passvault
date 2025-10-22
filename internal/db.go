@@ -150,3 +150,63 @@ func AddPassword(service, username, encryptedPassword, notes string) error {
 	}
 	return nil
 }
+
+type PasswordEntry struct {
+	ID                int
+	Service           string
+	Username          string
+	EncryptedPassword string
+	Notes             string
+	CreatedAt         string
+	UpdatedAt         string
+}
+
+func ListAllPasswords() ([]PasswordEntry, error) {
+	rows, err := DB.Query("SELECT id, service, username, encrypted_password, notes, created_at, updated_at FROM passwords ORDER BY service, username")
+	if err != nil {
+		return nil, fmt.Errorf("failed to query passwords: %w", err)
+	}
+	defer rows.Close()
+
+	var entries []PasswordEntry
+	for rows.Next() {
+		var entry PasswordEntry
+		if err := rows.Scan(&entry.ID, &entry.Service, &entry.Username, &entry.EncryptedPassword, &entry.Notes, &entry.CreatedAt, &entry.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan password entry: %w", err)
+		}
+		entries = append(entries, entry)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating passwords: %w", err)
+	}
+
+	return entries, nil
+}
+
+func SearchPasswords(query string) ([]PasswordEntry, error) {
+	searchPattern := "%" + query + "%"
+	rows, err := DB.Query(
+		"SELECT id, service, username, encrypted_password, notes, created_at, updated_at FROM passwords WHERE service LIKE ? OR username LIKE ? ORDER BY service, username",
+		searchPattern, searchPattern,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search passwords: %w", err)
+	}
+	defer rows.Close()
+
+	var entries []PasswordEntry
+	for rows.Next() {
+		var entry PasswordEntry
+		if err := rows.Scan(&entry.ID, &entry.Service, &entry.Username, &entry.EncryptedPassword, &entry.Notes, &entry.CreatedAt, &entry.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan password entry: %w", err)
+		}
+		entries = append(entries, entry)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating passwords: %w", err)
+	}
+
+	return entries, nil
+}
