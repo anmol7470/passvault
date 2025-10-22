@@ -139,7 +139,8 @@ func (m *listModel) filterItems() {
 	query := strings.ToLower(m.searchQuery)
 	for _, entry := range m.entries {
 		if strings.Contains(strings.ToLower(entry.Service), query) ||
-			strings.Contains(strings.ToLower(entry.Username), query) {
+			strings.Contains(strings.ToLower(entry.Username), query) ||
+			strings.Contains(strings.ToLower(entry.Alias), query) {
 			filtered = append(filtered, entry)
 		}
 	}
@@ -176,7 +177,11 @@ func (m listModel) renderList() string {
 			if i == m.cursor {
 				cursor = ">"
 			}
-			s.WriteString(fmt.Sprintf("%s %s (%s)\n", cursor, entry.Service, entry.Username))
+			if entry.Alias != "" {
+				s.WriteString(fmt.Sprintf("%s %s (%s) [%s]\n", cursor, entry.Service, entry.Username, entry.Alias))
+			} else {
+				s.WriteString(fmt.Sprintf("%s %s (%s)\n", cursor, entry.Service, entry.Username))
+			}
 		}
 	}
 
@@ -198,6 +203,9 @@ func (m listModel) renderDetail() string {
 	s.WriteString(fmt.Sprintf("Password: %s\n", m.decryptedPass))
 	if m.selectedEntry.Notes != "" {
 		s.WriteString(fmt.Sprintf("Notes: %s\n", m.selectedEntry.Notes))
+	}
+	if m.selectedEntry.Alias != "" {
+		s.WriteString(fmt.Sprintf("Alias: %s\n", m.selectedEntry.Alias))
 	}
 
 	s.WriteString("\n")

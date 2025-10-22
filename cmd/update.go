@@ -62,13 +62,19 @@ var updateCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		newAlias, err := promptWithDefault("Alias", entry.Alias)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error reading alias: %v\n", err)
+			os.Exit(1)
+		}
+
 		encryptedPassword, err := internal.EncryptPassword(newPassword, masterPassword)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error encrypting password: %v\n", err)
 			os.Exit(1)
 		}
 
-		if err := internal.UpdatePassword(entry.ID, newService, newUsername, encryptedPassword, newNotes); err != nil {
+		if err := internal.UpdatePassword(entry.ID, newService, newUsername, encryptedPassword, newNotes, newAlias); err != nil {
 			fmt.Fprintf(os.Stderr, "Error updating password: %v\n", err)
 			os.Exit(1)
 		}

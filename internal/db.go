@@ -60,6 +60,7 @@ func createTables() error {
 		username TEXT NOT NULL,
 		encrypted_password TEXT NOT NULL,
 		notes TEXT,
+		alias TEXT UNIQUE,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		UNIQUE(service, username)
@@ -141,10 +142,10 @@ func UpdateMasterPassword(hashedPassword string) error {
 	return nil
 }
 
-func AddPassword(service, username, encryptedPassword, notes string) error {
+func AddPassword(service, username, encryptedPassword, notes, alias string) error {
 	_, err := DB.Exec(
-		"INSERT INTO passwords (service, username, encrypted_password, notes) VALUES (?, ?, ?, ?)",
-		service, username, encryptedPassword, notes,
+		"INSERT INTO passwords (service, username, encrypted_password, notes, alias) VALUES (?, ?, ?, ?, ?)",
+		service, username, encryptedPassword, notes, alias,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to add password: %w", err)
@@ -158,12 +159,13 @@ type PasswordEntry struct {
 	Username          string
 	EncryptedPassword string
 	Notes             string
+	Alias             string
 	CreatedAt         string
 	UpdatedAt         string
 }
 
 func ListAllPasswords() ([]PasswordEntry, error) {
-	rows, err := DB.Query("SELECT id, service, username, encrypted_password, notes, created_at, updated_at FROM passwords ORDER BY service, username")
+	rows, err := DB.Query("SELECT id, service, username, encrypted_password, notes, alias, created_at, updated_at FROM passwords ORDER BY service, username")
 	if err != nil {
 		return nil, fmt.Errorf("failed to query passwords: %w", err)
 	}
@@ -172,8 +174,12 @@ func ListAllPasswords() ([]PasswordEntry, error) {
 	var entries []PasswordEntry
 	for rows.Next() {
 		var entry PasswordEntry
-		if err := rows.Scan(&entry.ID, &entry.Service, &entry.Username, &entry.EncryptedPassword, &entry.Notes, &entry.CreatedAt, &entry.UpdatedAt); err != nil {
+		var alias sql.NullString
+		if err := rows.Scan(&entry.ID, &entry.Service, &entry.Username, &entry.EncryptedPassword, &entry.Notes, &alias, &entry.CreatedAt, &entry.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan password entry: %w", err)
+		}
+		if alias.Valid {
+			entry.Alias = alias.String
 		}
 		entries = append(entries, entry)
 	}
@@ -188,8 +194,8 @@ func ListAllPasswords() ([]PasswordEntry, error) {
 func SearchPasswords(query string) ([]PasswordEntry, error) {
 	searchPattern := "%" + strings.ToLower(query) + "%"
 	rows, err := DB.Query(
-		"SELECT id, service, username, encrypted_password, notes, created_at, updated_at FROM passwords WHERE LOWER(service) LIKE ? OR LOWER(username) LIKE ? OR LOWER(notes) LIKE ? ORDER BY service, username",
-		searchPattern, searchPattern, searchPattern,
+		"SELECT id, service, username, encrypted_password, notes, alias, created_at, updated_at FROM passwords WHERE LOWER(service) LIKE ? OR LOWER(username) LIKE ? OR LOWER(notes) LIKE ? OR LOWER(alias) LIKE ? ORDER BY service, username",
+		searchPattern, searchPattern, searchPattern, searchPattern,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search passwords: %w", err)
@@ -199,8 +205,12 @@ func SearchPasswords(query string) ([]PasswordEntry, error) {
 	var entries []PasswordEntry
 	for rows.Next() {
 		var entry PasswordEntry
-		if err := rows.Scan(&entry.ID, &entry.Service, &entry.Username, &entry.EncryptedPassword, &entry.Notes, &entry.CreatedAt, &entry.UpdatedAt); err != nil {
+		var alias sql.NullString
+		if err := rows.Scan(&entry.ID, &entry.Service, &entry.Username, &entry.EncryptedPassword, &entry.Notes, &alias, &entry.CreatedAt, &entry.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan password entry: %w", err)
+		}
+		if alias.Valid {
+			entry.Alias = alias.String
 		}
 		entries = append(entries, entry)
 	}
@@ -212,10 +222,32 @@ func SearchPasswords(query string) ([]PasswordEntry, error) {
 	return entries, nil
 }
 
-func UpdatePassword(id int, service, username, encryptedPassword, notes string) error {
+func GetPasswordByAlias(alias string) (*PasswordEntry, error) {
+	var entry PasswordEntry
+	var aliasNull sql.NullString
+	err := DB.QueryRow(
+		"SELECT id, service, username, encrypted_password, notes, alias, created_at, updated_at FROM passwords WHERE alias = ?",
+		alias,
+	).Scan(&entry.ID, &entry.Service, &entry.Username, &entry.EncryptedPassword, &entry.Notes, &aliasNull, &entry.CreatedAt, &entry.UpdatedAt)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get password by alias: %w", err)
+	}
+
+	if aliasNull.Valid {
+		entry.Alias = aliasNull.String
+	}
+
+	return &entry, nil
+}
+
+func UpdatePassword(id int, service, username, encryptedPassword, notes, alias string) error {
 	result, err := DB.Exec(
-		"UPDATE passwords SET service = ?, username = ?, encrypted_password = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-		service, username, encryptedPassword, notes, id,
+		"UPDATE passwords SET service = ?, username = ?, encrypted_password = ?, notes = ?, alias = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+		service, username, encryptedPassword, notes, alias, id,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update password: %w", err)

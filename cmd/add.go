@@ -23,6 +23,7 @@ var addCmd = &cobra.Command{
 		username, _ := cmd.Flags().GetString("username")
 		password, _ := cmd.Flags().GetString("password")
 		notes, _ := cmd.Flags().GetString("notes")
+		alias, _ := cmd.Flags().GetString("alias")
 
 		if service == "" {
 			service, err = internal.PromptString("Service: ")
@@ -65,6 +66,14 @@ var addCmd = &cobra.Command{
 			}
 		}
 
+		if alias == "" {
+			alias, err = internal.PromptString("Alias (optional, for quick access): ")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error reading alias: %v\n", err)
+				os.Exit(1)
+			}
+		}
+
 		if service == "" || username == "" || password == "" {
 			fmt.Fprintf(os.Stderr, "Error: service, username, and password are required\n")
 			os.Exit(1)
@@ -76,7 +85,7 @@ var addCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if err := internal.AddPassword(service, username, encryptedPassword, notes); err != nil {
+		if err := internal.AddPassword(service, username, encryptedPassword, notes, alias); err != nil {
 			fmt.Fprintf(os.Stderr, "Error saving password: %v\n", err)
 			os.Exit(1)
 		}
@@ -92,4 +101,5 @@ func init() {
 	addCmd.Flags().StringP("username", "u", "", "Username")
 	addCmd.Flags().StringP("password", "p", "", "Password")
 	addCmd.Flags().StringP("notes", "n", "", "Notes (optional)")
+	addCmd.Flags().StringP("alias", "a", "", "Alias for quick access (optional)")
 }
