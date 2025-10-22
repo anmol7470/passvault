@@ -13,7 +13,7 @@ import (
 var updateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Update an existing password entry",
-	Long:  `Search for a password entry and update its service, username, or password.`,
+	Long:  `Search for a password entry and update its service, username, password, or notes.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		masterPassword, err := internal.PromptMasterPassword()
 		if err != nil {

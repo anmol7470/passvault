@@ -11,7 +11,7 @@ import (
 var addCmd = &cobra.Command{
 	Use:   "add",
 	Short: "Add a new password entry",
-	Long:  `Add a new password entry to the vault with service name, username, and password.`,
+	Long:  `Add a new password entry to the vault with service name, username, password, and optional notes.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		masterPassword, err := internal.PromptMasterPassword()
 		if err != nil {
@@ -22,6 +22,7 @@ var addCmd = &cobra.Command{
 		service, _ := cmd.Flags().GetString("service")
 		username, _ := cmd.Flags().GetString("username")
 		password, _ := cmd.Flags().GetString("password")
+		notes, _ := cmd.Flags().GetString("notes")
 
 		if service == "" {
 			service, err = internal.PromptString("Service: ")
@@ -47,6 +48,14 @@ var addCmd = &cobra.Command{
 			}
 		}
 
+		if notes == "" {
+			notes, err = internal.PromptString("Notes (optional): ")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error reading notes: %v\n", err)
+				os.Exit(1)
+			}
+		}
+
 		if service == "" || username == "" || password == "" {
 			fmt.Fprintf(os.Stderr, "Error: service, username, and password are required\n")
 			os.Exit(1)
@@ -58,7 +67,7 @@ var addCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if err := internal.AddPassword(service, username, encryptedPassword, ""); err != nil {
+		if err := internal.AddPassword(service, username, encryptedPassword, notes); err != nil {
 			fmt.Fprintf(os.Stderr, "Error saving password: %v\n", err)
 			os.Exit(1)
 		}
@@ -73,4 +82,5 @@ func init() {
 	addCmd.Flags().StringP("service", "s", "", "Service name")
 	addCmd.Flags().StringP("username", "u", "", "Username")
 	addCmd.Flags().StringP("password", "p", "", "Password")
+	addCmd.Flags().StringP("notes", "n", "", "Notes (optional)")
 }

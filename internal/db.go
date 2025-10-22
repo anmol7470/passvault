@@ -249,3 +249,39 @@ func DeletePassword(id int) error {
 
 	return nil
 }
+
+func ResetDatabase() error {
+	if _, err := DB.Exec("DELETE FROM passwords"); err != nil {
+		return fmt.Errorf("failed to delete passwords: %w", err)
+	}
+
+	if _, err := DB.Exec("DELETE FROM master_password"); err != nil {
+		return fmt.Errorf("failed to delete master password: %w", err)
+	}
+
+	return nil
+}
+
+func UpdateAllEncryptedPasswords(entries []PasswordEntry) error {
+	tx, err := DB.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	for _, entry := range entries {
+		_, err := tx.Exec(
+			"UPDATE passwords SET encrypted_password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+			entry.EncryptedPassword, entry.ID,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to update password for %s: %w", entry.Service, err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
