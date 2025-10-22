@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -185,10 +186,10 @@ func ListAllPasswords() ([]PasswordEntry, error) {
 }
 
 func SearchPasswords(query string) ([]PasswordEntry, error) {
-	searchPattern := "%" + query + "%"
+	searchPattern := "%" + strings.ToLower(query) + "%"
 	rows, err := DB.Query(
-		"SELECT id, service, username, encrypted_password, notes, created_at, updated_at FROM passwords WHERE service LIKE ? OR username LIKE ? ORDER BY service, username",
-		searchPattern, searchPattern,
+		"SELECT id, service, username, encrypted_password, notes, created_at, updated_at FROM passwords WHERE LOWER(service) LIKE ? OR LOWER(username) LIKE ? OR LOWER(notes) LIKE ? ORDER BY service, username",
+		searchPattern, searchPattern, searchPattern,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search passwords: %w", err)

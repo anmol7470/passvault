@@ -190,12 +190,18 @@ func (m searchModel) View() string {
 	s.WriteString(fmt.Sprintf("Query: %s\n", m.query))
 	s.WriteString(fmt.Sprintf("Found %d match(es)\n\n", len(m.entries)))
 
+	queryLower := strings.ToLower(m.query)
 	for i, entry := range m.entries {
 		cursor := " "
 		if i == m.cursor {
 			cursor = ">"
 		}
-		s.WriteString(fmt.Sprintf("%s %s (%s)\n", cursor, entry.Service, entry.Username))
+		s.WriteString(fmt.Sprintf("%s %s (%s)", cursor, entry.Service, entry.Username))
+
+		if entry.Notes != "" && strings.Contains(strings.ToLower(entry.Notes), queryLower) {
+			s.WriteString(fmt.Sprintf(" - %s", entry.Notes))
+		}
+		s.WriteString("\n")
 	}
 
 	s.WriteString("\n")
